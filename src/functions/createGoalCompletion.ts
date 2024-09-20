@@ -33,21 +33,29 @@ export async function CreateGoal({ goalId }: CreateGoalCompletion) {
       desiredWeeklyFrequency: goals.desiredWeeklyFrequency,
       completionCount: sql`
     COALESCE(${goalCompletionCounts.completionCount}, 0)
-    `,
+    `.mapWith(Number),
     })
     .from(goals)
     .leftJoin(goalCompletionCounts, eq(goalCompletionCounts.goalId, goals.id))
+    .where(eq(goals.id, goalId))
+    .limit(1)
 
-  // const result = await db
-  //   .insert(goalCompletions)
-  //   .values({
-  //     goalId,
-  //   })
-  //   .returning()
+  const { completionCount, desiredWeeklyFrequency } = result[0]
 
-  // const goalCompletion = result[0]
+  if (completionCount >= desiredWeeklyFrequency) {
+    throw new Error('Goal already completions this week!')
+  }
+
+  const insertResult = await db
+    .insert(goalCompletions)
+    .values({
+      goalId,
+    })
+    .returning()
+
+  const goalCompletion = insertResult[0]
 
   return {
-    result,
+    goalCompletion,
   }
 }
